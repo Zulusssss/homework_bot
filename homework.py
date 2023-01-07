@@ -138,6 +138,10 @@ def main():
             response = get_api_answer(timestamp)
             timestamp = response.get('current_date')
             homeworks = response.get('homeworks')
+<<<<<<< HEAD
+=======
+            logger.error('Test log error')
+>>>>>>> f411264590cc15eb9a3de2ef9d2b736884c13c8e
             if len(homeworks) > 0:
                 homework = homeworks[0]
                 print(homework.get('status'))
