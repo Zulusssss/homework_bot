@@ -15,7 +15,7 @@ def setup_logs():
     logger.setLevel(logging.ERROR)
 
     # console_handler = logging.StreamHandler(stream=sys.stdout)
-    file_handler = RotatingFileHandler('my_logger.log', maxBytes=50000000, backupCount=5)
+    file_handler = RotatingFileHandler('my_logger.log', maxBytes=50000000, backupCount=5, exc_info=True)
     telegram_handler = TelegramHandler()
     formater = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
 

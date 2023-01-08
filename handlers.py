@@ -29,8 +29,9 @@ class TelegramHandler(logging.Handler):
         message = self.format(record)
         if message.find('ERROR') != -1:
             text_message = message.split('ERROR', 1)[1].lstrip()
+            text_message = text_message.split('Traceback', 1)[0].rstrip()
             if self.pre_message != text_message:
-                self.send_message(message)
+                self.send_message(message.split('Traceback', 1)[0].rstrip())
                 self.pre_message = text_message
         else:
             return None

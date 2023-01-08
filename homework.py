@@ -134,7 +134,6 @@ def main():
             break
         try:
             response = get_api_answer(timestamp)
-            timestamp = response.get('current_date')
             homeworks = response.get('homeworks')
             if len(homeworks) > 0:
                 homework = homeworks[0]
@@ -144,6 +143,9 @@ def main():
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             send_message(bot, message)
+        finally:
+            if response is not None:
+                timestamp = response.get('current_date')
         time.sleep(RETRY_PERIOD)
 
 
