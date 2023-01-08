@@ -27,9 +27,10 @@ class TelegramHandler(logging.Handler):
 
     def emit(self, record):
         message = self.format(record)
-        text_message = message.split('ERROR', 1)[1].lstrip()
-        if self.pre_message == text_message:
-            return None
+        if message.find('ERROR') != -1:
+            text_message = message.split('ERROR', 1)[1].lstrip()
+            if self.pre_message != text_message:
+                self.send_message(message)
+                self.pre_message = text_message
         else:
-            self.send_message(message)
-            self.pre_message = text_message
+            return None

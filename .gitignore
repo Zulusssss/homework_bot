@@ -150,3 +150,8 @@ static/
 posts/static/
 media/
 
+# мои файлы, неиспользуемые для сдачи проекта
+exceptions.py
+setup_logs.py
+homework_1.py
+
