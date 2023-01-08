@@ -66,7 +66,7 @@ def check_tokens():
     """Проверяет наличие всех необходимых токенов."""
     if not(PRACTICUM_TOKEN and TELEGRAM_TOKEN and TELEGRAM_CHAT_ID):
         logger.critical('отсутствие обязательных переменных '
-                         'окружения во время запуска бота')
+                        'окружения во время запуска бота')
     return (PRACTICUM_TOKEN and TELEGRAM_TOKEN and TELEGRAM_CHAT_ID)
 
 
