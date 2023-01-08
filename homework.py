@@ -65,8 +65,8 @@ HOMEWORK_VERDICTS = {
 def check_tokens():
     """Проверяет наличие всех необходимых токенов."""
     if not(PRACTICUM_TOKEN and TELEGRAM_TOKEN and TELEGRAM_CHAT_ID):
-        logging.critical('отсутствие обязательных переменных '
-                         'окружения во время запуска бота')
+        logger.critical('отсутствие обязательных переменных '
+                        'окружения во время запуска бота')
     return (PRACTICUM_TOKEN and TELEGRAM_TOKEN and TELEGRAM_CHAT_ID)
 
 
@@ -88,11 +88,15 @@ def get_api_answer(timestamp):
     payload = {'from_date': timestamp}
     try:
         response = requests.get(ENDPOINT, headers=HEADERS, params=payload)
+        if response.status_code == 200 and check_response(response.json()):
+            return response.json()
+        else:
+            logger.error('Плохое соединение с API')
+            raise Exception('Плохое соединение с API')
+
     except requests.RequestException as e:
         logger.error("недоступность эндпоинта или сбои "
                      f"при запросе к нему: {e}")
-    if check_response(response.json()):
-        return response.json()
 
 
 def check_response(response):
@@ -114,6 +118,7 @@ def parse_status(homework):
     Запускается, когда статус домашней работы изменился.
     """
     if 'homework_name' not in homework.keys():
+        logger('в ответе API домашки нет ключа `homework_name')
         raise KeyError('в ответе API домашки нет ключа `homework_name')
     if homework.get('status') not in HOMEWORK_VERDICTS.keys():
         logger.error('неожиданный статус домашней работы, '
@@ -129,6 +134,7 @@ def main():
     """Основная логика работы бота."""
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     timestamp = int(time.time())
+    response = None
     while True:
         if not(check_tokens()):
             break
