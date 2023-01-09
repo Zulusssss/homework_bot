@@ -1,9 +1,10 @@
+from http import HTTPStatus
 import logging
 import requests
 import telegram
 import time
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv, dotenv_values
 
 from handlers import TelegramHandler
 from logging.handlers import RotatingFileHandler
@@ -64,10 +65,12 @@ HOMEWORK_VERDICTS = {
 
 def check_tokens():
     """Проверяет наличие всех необходимых токенов."""
-    if not(PRACTICUM_TOKEN and TELEGRAM_TOKEN and TELEGRAM_CHAT_ID):
+    global_neccesary_vars = [val for keys, val in globals().items()
+                             if keys in list(dotenv_values(".env"))]
+    if not(all(global_neccesary_vars)):
         logger.critical('отсутствие обязательных переменных '
                         'окружения во время запуска бота')
-    return (PRACTICUM_TOKEN and TELEGRAM_TOKEN and TELEGRAM_CHAT_ID)
+    return all(global_neccesary_vars)
 
 
 def send_message(bot, message):
@@ -88,15 +91,17 @@ def get_api_answer(timestamp):
     payload = {'from_date': timestamp}
     try:
         response = requests.get(ENDPOINT, headers=HEADERS, params=payload)
-        if response.status_code == 200 and check_response(response.json()):
+        if response.status_code == HTTPStatus.OK:
             return response.json()
         else:
-            logger.error('Плохое соединение с API')
             raise Exception('Плохое соединение с API')
-
     except requests.RequestException as e:
         logger.error("недоступность эндпоинта или сбои "
                      f"при запросе к нему: {e}")
+        raise Exception
+    except Exception as e:
+        logger.error(f"Ошибка: {e}")
+        raise Exception(f"Ошибка: {e}")
 
 
 def check_response(response):
@@ -105,6 +110,8 @@ def check_response(response):
         raise TypeError('Неподходящий тип данных ответа API - не словарь')
     if type(response.get('homeworks')) is not list:
         raise TypeError('Неподходящий тип данных ответа API - не cписок')
+    if type(response.get('homeworks')[0]) is not dict:
+        raise TypeError('Неподходящий тип данных ответа API - не словарь')
     if list(response.keys()) == ['homeworks', 'current_date']:
         return True
     else:
@@ -132,27 +139,31 @@ def parse_status(homework):
 
 def main():
     """Основная логика работы бота."""
-    bot = telegram.Bot(token=TELEGRAM_TOKEN)
+    bot = telegram.Bot(token=TELEGRAM_TOKEN) if check_tokens else None
     timestamp = int(time.time())
     response = None
+    pre_message = None
     while True:
         if not(check_tokens()):
             break
         try:
             response = get_api_answer(timestamp)
-            homeworks = response.get('homeworks')
-            if len(homeworks) > 0:
-                homework = homeworks[0]
-                send_message(bot, parse_status(homework))
-            else:
-                logging.debug('отсутствие в ответе новых статусов')
+            if check_response(response):
+                homeworks = response.get('homeworks')
+                if homeworks:
+                    homework = homeworks[0]
+                    send_message(bot, parse_status(homework))
+                else:
+                    logging.debug('отсутствие в ответе новых статусов')
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
-            send_message(bot, message)
+            if message != pre_message:
+                send_message(bot, message)
+                pre_message = message
         finally:
             if response is not None:
                 timestamp = response.get('current_date')
-        time.sleep(RETRY_PERIOD)
+            time.sleep(RETRY_PERIOD)
 
 
 if __name__ == '__main__':
