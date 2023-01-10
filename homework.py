@@ -67,9 +67,6 @@ def check_tokens():
     """Проверяет наличие всех необходимых токенов."""
     global_neccesary_vars = [val for keys, val in globals().items()
                              if keys in list(dotenv_values(".env"))]
-    if not(all(global_neccesary_vars)):
-        logger.critical('отсутствие обязательных переменных '
-                        'окружения во время запуска бота')
     return all(global_neccesary_vars)
 
 
@@ -98,7 +95,8 @@ def get_api_answer(timestamp):
     except requests.RequestException as e:
         logger.error("недоступность эндпоинта или сбои "
                      f"при запросе к нему: {e}")
-        raise Exception
+        raise Exception("недоступность эндпоинта или сбои "
+                        f"при запросе к нему: {e}")
     except Exception as e:
         logger.error(f"Ошибка: {e}")
         raise Exception(f"Ошибка: {e}")
@@ -106,11 +104,11 @@ def get_api_answer(timestamp):
 
 def check_response(response):
     """Проверяет соответствие ответа API документации API."""
-    if type(response) is not dict:
+    if not isinstance(response, dict):
         raise TypeError('Неподходящий тип данных ответа API - не словарь')
-    if type(response.get('homeworks')) is not list:
+    if not isinstance(response.get('homeworks'), list):
         raise TypeError('Неподходящий тип данных ответа API - не cписок')
-    if type(response.get('homeworks')[0]) is not dict:
+    if not isinstance(response.get('homeworks')[0], dict):
         raise TypeError('Неподходящий тип данных ответа API - не словарь')
     if list(response.keys()) == ['homeworks', 'current_date']:
         return True
@@ -139,27 +137,34 @@ def parse_status(homework):
 
 def main():
     """Основная логика работы бота."""
-    bot = telegram.Bot(token=TELEGRAM_TOKEN) if check_tokens else None
+    if not(check_tokens()):
+        logger.critical('отсутствие обязательных переменных '
+                        'окружения во время запуска бота')
+        raise Exception('отсутствие обязательных переменных '
+                        'окружения во время запуска бота')
+    bot = telegram.Bot(token=TELEGRAM_TOKEN)
     timestamp = int(time.time())
     response = None
+    pre_error = None
     pre_message = None
     while True:
-        if not(check_tokens()):
-            break
         try:
             response = get_api_answer(timestamp)
             if check_response(response):
                 homeworks = response.get('homeworks')
                 if homeworks:
                     homework = homeworks[0]
-                    send_message(bot, parse_status(homework))
+                    message = parse_status(homework)
+                    if message != pre_message:
+                        send_message(bot, parse_status(homework))
+                        pre_message = message
                 else:
                     logging.debug('отсутствие в ответе новых статусов')
         except Exception as error:
-            message = f'Сбой в работе программы: {error}'
-            if message != pre_message:
-                send_message(bot, message)
-                pre_message = message
+            message_err = f'Сбой в работе программы: {error}'
+            if message_err != pre_error:
+                send_message(bot, message_err)
+                pre_error = message_err
         finally:
             if response is not None:
                 timestamp = response.get('current_date')

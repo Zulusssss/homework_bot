@@ -7,10 +7,11 @@ from dotenv import load_dotenv, dotenv_values
 
 load_dotenv()
 
-TOKENS = dotenv_values('.env')
-PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
-TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
-TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+TOKENS = dict(dotenv_values('.env'))
+values = (x for x in TOKENS.values())
+for i in TOKENS.keys():
+    exec('%s = next(values)' % i, globals())
+del(i)
 
 bot = telegram.Bot(token=TELEGRAM_TOKEN)
 
